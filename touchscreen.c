@@ -13,7 +13,6 @@
 #define DRIVE_B PORTCbits.RC14
 
 unsigned int x_val = 0;
-unsigned int adcbuf0, adcbuf1;
 unsigned int y_val = 0;
 unsigned int X = 0;
 unsigned int Y = 0;
@@ -21,20 +20,12 @@ unsigned int TS_drivers_cnt = 0;
 
 unsigned int tmr2_intr_flag = 0;
 
-void __attribute__((__interrupt__)) _ADCInterrupt(void)
-{
-	adcbuf0=ADCBUF0;//0
-	adcbuf1=ADCBUF1;//1
-
-  IFS0bits.ADIF = 0;
-}
-
 void __attribute__ ((__interrupt__)) _T2Interrupt(void)
 {
   TMR2 =0;
 
   if(TS_drivers_cnt == 2){
-    y_val = adcbuf1;
+    y_val = getADCbuf1();
     TS_drivers_cnt = 0;
   }
   if(TS_drivers_cnt == 0){
@@ -46,7 +37,7 @@ void __attribute__ ((__interrupt__)) _T2Interrupt(void)
     TS_drivers_cnt = 1;
   }
   else if(TS_drivers_cnt == 1){
-    x_val = adcbuf0;
+    x_val = getADCbuf0();
     // vode vertikalni tranzistori
     LATCbits.LATC13=0;
     LATCbits.LATC14=1;
@@ -55,7 +46,6 @@ void __attribute__ ((__interrupt__)) _T2Interrupt(void)
     TS_drivers_cnt = 2;
   }
 
-  LATFbits.LATF6=~LATFbits.LATF6;
 	IFS0bits.T2IF = 0;
 
 }
@@ -125,10 +115,8 @@ unsigned int getY(){
 
 void initTouchScreen(){
   ConfigureTSPins();
-
-	ADCinit_TS();
 	ConfigureADCPins_TS();
-	ADCON1bits.ADON=1;
+
   TMR2_init();
   TMR2_start();
 }

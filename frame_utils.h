@@ -11,5 +11,10 @@
 
 void drawNumpad();
 void drawPwdIndicator(int num);
+void drawPasswordCorrect();
+void drawPasswordWrong();
+void drawAlcTestInfo();
+void drawAlcTestFail();
+void drawAlcTestPass();
 
 #endif

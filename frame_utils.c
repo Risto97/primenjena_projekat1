@@ -35,4 +35,45 @@ void drawNumpad(){
   }
 }
 
+void printf_Big(char *str){
+  int i = 0;
+  while(str[i] != '\0'){
+    Glcd_PutCharBig((char)str[i]);
+    i++;
+  }
+}
+
+void drawPasswordCorrect(){
+  GoToXY(32, 2);
+  printf_Big("Correct");
+  GoToXY(27, 4);
+  printf_Big("Password!");
+}
+
+void drawPasswordWrong(){
+  GoToXY(32, 2);
+  printf_Big("Wrong");
+  GoToXY(27, 4);
+  printf_Big("Password!");
+
+}
+
+void drawAlcTestInfo(){
+  GoToXY(20, 2);
+  printf_Big("Please blow");
+  GoToXY(20, 4);
+  printf_Big("onto sensor!");
+}
+
+void drawAlcTestFail(){
+  GoToXY(10, 2);
+  printf_Big("Alcohol detected");
+  GoToXY(15, 4);
+  printf_Big("Access denied!");
+}
+void drawAlcTestPass(){
+  GoToXY(0, 3);
+  printf_Big("Access Granted!");
+}
+
 #endif

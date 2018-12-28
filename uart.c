@@ -46,6 +46,10 @@ void WriteUART1dec2string(int data)
     data = -data;
   }
 
+	temp=data/100000;
+	WriteUART1(temp+'0');
+	temp=data/10000;
+	WriteUART1(temp+'0');
 	temp=data/1000;
 	WriteUART1(temp+'0');
 	data=data-temp*1000;

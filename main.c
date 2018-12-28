@@ -7,14 +7,20 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <p30Fxxxx.h>
+/* #include <p30Fxxxx.h> */
 #include "uart.h"
 #include "driverGLCD.h"
 #include "frame_utils.h"
 #include "touchscreen.h"
+#include "adc.h"
+#include "alc_test.h"
 
 #define FCY 2500000UL
 #include <libpic30.h>
+
+/* _FOSC(CSW_ON_FSCM_OFF & HS3_PLL4); */
+/* _FWDT(WDT_OFF); */
+/* _FGS(CODE_PROT_OFF); */
 
 #pragma config FOSFPR = HS3_PLL4        // Oscillator (HS3 w/PLL 4x)
 #pragma config FCKSMEN = CSW_ON_FSCM_OFF// Clock Switching and Monitor (Sw Enabled, Mon Disabled)
@@ -42,7 +48,35 @@
 
 #include <xc.h>
 
+unsigned int TMR4_soft_cnt = 0;
+unsigned int alc_test_timeout = 0;
+void __attribute__ ((__interrupt__)) _T4Interrupt(void)
+{
+  TMR4 =0;
+  TMR4_soft_cnt++;
+  if(TMR4_soft_cnt == 3){
+    LATFbits.LATF6=~LATFbits.LATF6;
+    TMR4_soft_cnt = 0;
+    alc_test_timeout = 1;
+    TMR4_stop();
+  }
 
+	IFS1bits.T4IF = 0;
+}
+
+
+int check_password(unsigned int *pwd,
+                    unsigned int *entry,
+                    unsigned int len){
+  int i = 0;
+  for(i=0; i<len; i++){
+    if(pwd[i] != entry[i])
+      return -1;
+  }
+  return 1;
+}
+
+unsigned int pwd[4] = {1,3,5,8};
 unsigned int pwd_array[4];
 unsigned int pwd_cnt = 0;
 unsigned int pwd_rd = 0;
@@ -53,9 +87,13 @@ int main(int argc, char** argv) {
   unsigned int Y = 0;
   int PWD_in = 0;
   int i = 0;
+  int no_alc = 1;
 
 	ConfigureLCDPins();
   initTouchScreen();
+  initAlc();
+	ADCinit_TS();
+  ADCstart();
 	GLCD_LcdInit();
 	GLCD_ClrScr();
   initUART1();
@@ -63,6 +101,7 @@ int main(int argc, char** argv) {
 	TRISFbits.TRISF6=0;//konfigurisemo kao izlaz
 
   drawNumpad();
+  /* drawPasswordCorrect(); */
 
   RS232_putst("\n----------------------");
   RS232_putst("\nEnter Password!\n");
@@ -91,6 +130,43 @@ int main(int argc, char** argv) {
         RS232_putst("\n");
       }
       pwd_cnt = 0;
+
+      GLCD_ClrScr();
+      if(check_password(pwd, pwd_array, 4) == 1){
+        drawPasswordCorrect();
+        __delay_ms(2000);
+        GLCD_ClrScr();
+        drawAlcTestInfo();
+        ADCinit_Alc();
+        TMR4_start();
+        while(no_alc && !alc_test_timeout){
+          if(getAlcTest() == -1){
+            no_alc = 0;
+            pwd_cnt = 0;
+            pwd_rd = 0;
+            GLCD_ClrScr();
+            drawAlcTestFail();
+            __delay_ms(2000);
+          }
+        }
+        alc_test_timeout = 0;
+        no_alc = 1;
+        GLCD_ClrScr();
+        drawAlcTestPass();
+        __delay_ms(2000);
+        GLCD_ClrScr();
+        drawNumpad();
+        ADCinit_TS();
+        __delay_ms(500);
+      }
+      else{
+        pwd_cnt = 0;
+        pwd_rd = 0;
+        drawPasswordWrong();
+        __delay_ms(2000);
+        GLCD_ClrScr();
+        drawNumpad();
+      }
     }
   }
     return (EXIT_SUCCESS);
