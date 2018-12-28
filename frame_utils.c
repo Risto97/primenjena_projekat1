@@ -66,7 +66,7 @@ void drawAlcTestInfo(){
 }
 
 void drawAlcTestFail(){
-  GoToXY(10, 2);
+  GoToXY(0, 2);
   printf_Big("Alcohol detected");
   GoToXY(15, 4);
   printf_Big("Access denied!");

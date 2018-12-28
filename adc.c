@@ -24,15 +24,11 @@ unsigned int getADCbuf1(){
 
 void ConfigureADCPins_TS(void)
 {
-	//ADPCFGbits.PCFG6=0;
-	/* ADPCFGbits.PCFG8=0; */
-	/* ADPCFGbits.PCFG9=0; */
+	ADPCFGbits.PCFG8=0;
+	ADPCFGbits.PCFG9=0;
 
-//	TRISBbits.TRISB6=1;
-	/* TRISBbits.TRISB8=1; */
-	/* TRISBbits.TRISB9=1; */
-	/* ADPCFGbits.PCFG12=0; */
-	/* TRISBbits.TRISB12=1; */
+	TRISBbits.TRISB8=1;
+	TRISBbits.TRISB9=1;
 }
 
 void ConfigureADCPins_Alc(){

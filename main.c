@@ -14,6 +14,7 @@
 #include "touchscreen.h"
 #include "adc.h"
 #include "alc_test.h"
+#include "misc.h"
 
 #define FCY 2500000UL
 #include <libpic30.h>
@@ -54,8 +55,7 @@ void __attribute__ ((__interrupt__)) _T4Interrupt(void)
 {
   TMR4 =0;
   TMR4_soft_cnt++;
-  if(TMR4_soft_cnt == 3){
-    LATFbits.LATF6=~LATFbits.LATF6;
+  if(TMR4_soft_cnt == 1){
     TMR4_soft_cnt = 0;
     alc_test_timeout = 1;
     TMR4_stop();
@@ -76,6 +76,17 @@ int check_password(unsigned int *pwd,
   return 1;
 }
 
+void CloseDoors(){
+  ServoStart(1);
+  __delay_ms(1000);
+  ServoStop();
+}
+void OpenDoors(){
+  ServoStart(0);
+  __delay_ms(1000);
+  ServoStop();
+}
+
 unsigned int pwd[4] = {1,3,5,8};
 unsigned int pwd_array[4];
 unsigned int pwd_cnt = 0;
@@ -91,6 +102,8 @@ int main(int argc, char** argv) {
 
 	ConfigureLCDPins();
   initTouchScreen();
+  initServo();
+  initBuzzer();
   initAlc();
 	ADCinit_TS();
   ADCstart();
@@ -98,15 +111,9 @@ int main(int argc, char** argv) {
 	GLCD_ClrScr();
   initUART1();
 
-	TRISFbits.TRISF6=0;//konfigurisemo kao izlaz
-
   drawNumpad();
-  /* drawPasswordCorrect(); */
 
-  RS232_putst("\n----------------------");
-  RS232_putst("\nEnter Password!\n");
-	/* LATFbits.LATF6=~LATFbits.LATF6; */
-
+  CloseDoors();
   while(1){
 
     PWD_in = getNumTS();
@@ -119,6 +126,9 @@ int main(int argc, char** argv) {
       pwd_array[pwd_cnt] = PWD_in;
       drawPwdIndicator(pwd_cnt);
       pwd_cnt++;
+      BuzzerStart(700+PWD_in*20);
+      __delay_ms(100);
+      BuzzerStop();
     }
     else if(PWD_in == -1)
       pwd_rd = 0;
@@ -153,7 +163,11 @@ int main(int argc, char** argv) {
         no_alc = 1;
         GLCD_ClrScr();
         drawAlcTestPass();
-        __delay_ms(2000);
+        TMR4_start();
+        OpenDoors();
+        while(!alc_test_timeout);
+        alc_test_timeout = 0;
+        CloseDoors();
         GLCD_ClrScr();
         drawNumpad();
         ADCinit_TS();
