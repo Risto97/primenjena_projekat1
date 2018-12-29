@@ -34,9 +34,6 @@ void TMR4_stop(){
 int getAlcTest(){
   unsigned int res;
   res = getADCbuf0();
-  RS232_putst("alc_test: ");
-  WriteUART1dec2string(res);
-  RS232_putst("\n");
 
   if(res > 1000)
     return -1;

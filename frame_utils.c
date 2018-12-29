@@ -76,4 +76,11 @@ void drawAlcTestPass(){
   printf_Big("Access Granted!");
 }
 
+void drawSupervisorOpen(){
+  GoToXY(5, 2);
+  printf_Big("Supervisor mode");
+  GoToXY(15, 4);
+  printf_Big("Door Open!");
+}
+
 #endif

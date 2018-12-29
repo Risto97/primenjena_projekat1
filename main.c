@@ -64,7 +64,6 @@ void __attribute__ ((__interrupt__)) _T4Interrupt(void)
 	IFS1bits.T4IF = 0;
 }
 
-
 int check_password(unsigned int *pwd,
                     unsigned int *entry,
                     unsigned int len){
@@ -92,13 +91,43 @@ unsigned int pwd_array[4];
 unsigned int pwd_cnt = 0;
 unsigned int pwd_rd = 0;
 
+const unsigned char *open_cmd = "open";
+const unsigned char *close_cmd = "close";
+
+int strcmp(unsigned char *str1, unsigned char *str2){
+  int i = 0;
+  while(str1[i] == str2[i] && str1[i] != '\0'){
+    i++;
+  }
+  if(str1[i] != str2[i])
+    return -1;
+  else return i;
+}
+
+int decodeCMD(unsigned char *cmd){
+  if(strcmp(open_cmd, cmd) != -1){
+    RS232_putst("\nCommand open received!\n");
+    return 0;
+  }
+  else if(strcmp(close_cmd, cmd) != -1){
+    RS232_putst("\nCommand close received!\n");
+    return 1;
+  }
+
+  RS232_putst("\nInvalid command!\n");
+  return -1;
+}
+
 int main(int argc, char** argv) {
-  unsigned char jovo[32] = "Jovo Vojvoda\n";
   unsigned int X = 0;
   unsigned int Y = 0;
   int PWD_in = 0;
   int i = 0;
   int no_alc = 1;
+  int cmd = -1;
+  int supervisor = 0;
+
+  unsigned char *rbuff2;
 
 	ConfigureLCDPins();
   initTouchScreen();
@@ -113,73 +142,90 @@ int main(int argc, char** argv) {
 
   drawNumpad();
 
+  RS232_putst("Type for supervisor mode\n");
   CloseDoors();
   while(1){
-
-    PWD_in = getNumTS();
-    if(PWD_in != -1 && pwd_rd == 0){
+    if(getBuff() > 0){
+      rbuff2 = rbuff();
       RS232_putst("\n");
-      RS232_putst("pwd_cnt: ");
-      WriteUART1dec2string(PWD_in);
-      RS232_putst("\n");
-      pwd_rd = 1;
-      pwd_array[pwd_cnt] = PWD_in;
-      drawPwdIndicator(pwd_cnt);
-      pwd_cnt++;
-      BuzzerStart(700+PWD_in*20);
-      __delay_ms(100);
-      BuzzerStop();
-    }
-    else if(PWD_in == -1)
-      pwd_rd = 0;
-
-    if(pwd_cnt == 4){
-      RS232_putst("\nPWD_entered: \n");
-      for(i = 0; i<4; i++){
-        WriteUART1dec2string(pwd_array[i]);
-        RS232_putst("\n");
-      }
-      pwd_cnt = 0;
-
-      GLCD_ClrScr();
-      if(check_password(pwd, pwd_array, 4) == 1){
-        drawPasswordCorrect();
-        __delay_ms(2000);
-        GLCD_ClrScr();
-        drawAlcTestInfo();
-        ADCinit_Alc();
-        TMR4_start();
-        while(no_alc && !alc_test_timeout){
-          if(getAlcTest() == -1){
-            no_alc = 0;
-            pwd_cnt = 0;
-            pwd_rd = 0;
-            GLCD_ClrScr();
-            drawAlcTestFail();
-            __delay_ms(2000);
-          }
-        }
-        alc_test_timeout = 0;
-        no_alc = 1;
-        GLCD_ClrScr();
-        drawAlcTestPass();
-        TMR4_start();
-        OpenDoors();
-        while(!alc_test_timeout);
-        alc_test_timeout = 0;
-        CloseDoors();
-        GLCD_ClrScr();
-        drawNumpad();
-        ADCinit_TS();
-        __delay_ms(500);
-      }
-      else{
-        pwd_cnt = 0;
+      RS232_putst(rbuff2);
+      cmd = decodeCMD(rbuff2);
+      if(cmd == 0){
         pwd_rd = 0;
-        drawPasswordWrong();
-        __delay_ms(2000);
+        pwd_cnt = 0;
+        supervisor = 1;
         GLCD_ClrScr();
+        drawSupervisorOpen();
+        OpenDoors();
+      }
+      if(cmd == 1){
+        supervisor = 0;
+        GLCD_ClrScr();
+        CloseDoors();
         drawNumpad();
+      }
+    }
+
+    else if(supervisor == 0){
+      PWD_in = getNumTS();
+      if(PWD_in != -1 && pwd_rd == 0){
+        pwd_rd = 1;
+        pwd_array[pwd_cnt] = PWD_in;
+        drawPwdIndicator(pwd_cnt);
+        pwd_cnt++;
+        BuzzerStart(700+PWD_in*20);
+        __delay_ms(100);
+        BuzzerStop();
+      }
+      else if(PWD_in == -1)
+        pwd_rd = 0;
+
+      if(pwd_cnt == 4){
+        pwd_cnt = 0;
+
+        GLCD_ClrScr();
+        if(check_password(pwd, pwd_array, 4) == 1){
+          drawPasswordCorrect();
+          __delay_ms(2000);
+          GLCD_ClrScr();
+          drawAlcTestInfo();
+          ADCinit_Alc();
+          TMR4_start();
+          while(no_alc && !alc_test_timeout){
+            if(getAlcTest() == -1){
+              no_alc = 0;
+              pwd_cnt = 0;
+              pwd_rd = 0;
+              GLCD_ClrScr();
+              drawAlcTestFail();
+              __delay_ms(2000);
+            }
+          }
+          alc_test_timeout = 0;
+          if(no_alc == 1){
+            no_alc = 1;
+            GLCD_ClrScr();
+            drawAlcTestPass();
+            TMR4_start();
+            OpenDoors();
+            while(!alc_test_timeout);
+            alc_test_timeout = 0;
+            CloseDoors();
+          }
+          no_alc = 1;
+          GLCD_ClrScr();
+          drawNumpad();
+          ADCinit_TS();
+          __delay_ms(500);
+        }
+        else{
+          pwd_cnt = 0;
+          pwd_rd = 0;
+          drawPasswordWrong();
+          __delay_ms(2000);
+          GLCD_ClrScr();
+          drawNumpad();
+        }
       }
     }
   }
