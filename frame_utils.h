@@ -10,6 +10,7 @@
 #define BAR_SPACE 4
 
 void drawNumpad();
+void drawNumpad_noClr();
 void drawPwdIndicator(int num);
 void drawPasswordCorrect();
 void drawPasswordWrong();
@@ -17,5 +18,6 @@ void drawAlcTestInfo();
 void drawAlcTestFail();
 void drawAlcTestPass();
 void drawSupervisorOpen();
+void drawNoPwdEeprom();
 
 #endif

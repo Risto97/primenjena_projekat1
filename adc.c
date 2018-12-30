@@ -7,7 +7,7 @@
 #include "uart.h"
 
 unsigned int adcbuf0, adcbuf1;
-void __attribute__((__interrupt__)) _ADCInterrupt(void)
+void __attribute__((__interrupt__, no_auto_psv)) _ADCInterrupt(void)
 {
 	adcbuf0=ADCBUF0;//0
 	adcbuf1=ADCBUF1;//1

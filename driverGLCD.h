@@ -46,7 +46,7 @@
 #define RB4_0 LATB&=0b1111111111101111
 
 
-#define Nop() {__asm__ volatile ("nop");}
+/* #define Nop() {__asm__ volatile ("nop");} */
 
 void SetRST(unsigned char vrednost);
 void SetE(unsigned char vrednost);

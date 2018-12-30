@@ -3,17 +3,17 @@
 
 #include "uart.h"
 
-unsigned char tempRX;
+char tempRX;
 unsigned int wordReceived = 0;
-unsigned char buff[32];
+char buff[32];
 unsigned int len = 0;
 int n = 0;
-void __attribute__((__interrupt__)) _U1RXInterrupt(void) {
+void __attribute__((__interrupt__, no_auto_psv)) _U1RXInterrupt(void) {
   IFS0bits.U1RXIF = 0;
   tempRX = U1RXREG;
   buff[n] = tempRX;
   n++;
-  if(buff[n-1] == '#'){
+  if(buff[n-1] == 13){  // 13 is ascii for carriage return
     buff[n-1] = '\0';
     wordReceived = 1;
     len = n;
@@ -31,8 +31,8 @@ int getBuff(){
   else
     return -1;
 }
-unsigned char *rbuff(){
-  return &buff;
+char *rbuff(){
+  return buff;
 }
 
 void initUART1()
@@ -47,7 +47,7 @@ void initUART1()
   TRISFbits.TRISF3 = 0;
 }
 
-void RS232_putst(unsigned char *str){
+void RS232_putst(char *str){
   while((*str)!=0) {
     WriteUART1(*str);
     if (*str==13) WriteUART1(10);

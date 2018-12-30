@@ -9,10 +9,14 @@ int rect_height = (int)64/3+3;
 
 void drawPwdIndicator(int num){
   GLCD_Circle(bar_start+num*BAR_WIDTH+num*BAR_SPACE+(BAR_WIDTH/2), 58, 3);
-
 }
 
 void drawNumpad(){
+  GLCD_ClrScr();
+  drawNumpad_noClr();
+}
+
+void drawNumpad_noClr(){
   int x;
   int y;
   int i;
@@ -42,8 +46,15 @@ void printf_Big(char *str){
     i++;
   }
 }
-
+void drawNoPwdEeprom(){
+  GLCD_ClrScr();
+  GoToXY(5, 2);
+  printf_Big("No passwords");
+  GoToXY(5, 4);
+  printf_Big("Connect UART!");
+}
 void drawPasswordCorrect(){
+  GLCD_ClrScr();
   GoToXY(32, 2);
   printf_Big("Correct");
   GoToXY(27, 4);
@@ -51,6 +62,7 @@ void drawPasswordCorrect(){
 }
 
 void drawPasswordWrong(){
+  GLCD_ClrScr();
   GoToXY(32, 2);
   printf_Big("Wrong");
   GoToXY(27, 4);
@@ -59,6 +71,7 @@ void drawPasswordWrong(){
 }
 
 void drawAlcTestInfo(){
+  GLCD_ClrScr();
   GoToXY(20, 2);
   printf_Big("Please blow");
   GoToXY(20, 4);
@@ -66,17 +79,20 @@ void drawAlcTestInfo(){
 }
 
 void drawAlcTestFail(){
+  GLCD_ClrScr();
   GoToXY(0, 2);
   printf_Big("Alcohol detected");
   GoToXY(15, 4);
   printf_Big("Access denied!");
 }
 void drawAlcTestPass(){
+  GLCD_ClrScr();
   GoToXY(0, 3);
   printf_Big("Access Granted!");
 }
 
 void drawSupervisorOpen(){
+  GLCD_ClrScr();
   GoToXY(5, 2);
   printf_Big("Supervisor mode");
   GoToXY(15, 4);

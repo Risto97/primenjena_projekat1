@@ -2,6 +2,7 @@
 #define ALC_TEST_C
 
 #include "adc.h"
+#include "alc_test.h"
 #include "uart.h"
 
 void initAlc(){
@@ -10,7 +11,7 @@ void initAlc(){
 }
 
 #define TMR4_period 48828 //  Fosc = 2.5MHz, FOSC/4, prescaler = 64, 1s => PR2 = 39062
-void TMR4_init(void)
+void TMR4_init()
 {
 	TMR4 = 0;
 	PR4 = TMR4_period;

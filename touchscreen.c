@@ -7,10 +7,6 @@
 #include "frame_utils.h"
 #include "uart.h"
 
-#define TMR2_period 39062/32 //  Fosc = 2.5MHz, FOSC/4, prescaler = 64, 1s => PR2 = 39062
-
-#define DRIVE_A PORTCbits.RC13
-#define DRIVE_B PORTCbits.RC14
 
 unsigned int x_val = 0;
 unsigned int y_val = 0;
@@ -20,7 +16,7 @@ unsigned int TS_drivers_cnt = 0;
 
 unsigned int tmr2_intr_flag = 0;
 
-void __attribute__ ((__interrupt__)) _T2Interrupt(void)
+void __attribute__ ((__interrupt__, no_auto_psv)) _T2Interrupt(void)
 {
   TMR2 =0;
 

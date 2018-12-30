@@ -8,7 +8,7 @@ unsigned int servo_tmr_vals[2][2] = {{48550, 1450},
 unsigned int servo_dir = 0;
 unsigned int servo_phase_cnt = 0;
 unsigned int buzz_servo = 1;
-void __attribute__ ((__interrupt__)) _T5Interrupt(void)
+void __attribute__ ((__interrupt__, no_auto_psv)) _T5Interrupt(void)
 {
   TMR5 = 0;
   TMR5_stop();
@@ -63,7 +63,6 @@ void ServoStart(unsigned int direction){
   buzz_servo = 1;
   servo_dir = direction;
   TMR5_set(servo_tmr_vals[direction][1]);
-  /* TMR5_set(SERVO_PULSE_OPEN); */
 	LATFbits.LATF6=1;
   TMR5_start();
 }
