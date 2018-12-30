@@ -80,18 +80,17 @@ void WriteUART1dec2string(int data)
     data = -data;
   }
 
-	temp=data/100000;
-	WriteUART1(temp+'0');
-	temp=data/10000;
-	WriteUART1(temp+'0');
 	temp=data/1000;
-	WriteUART1(temp+'0');
+  if(temp != 0)
+    WriteUART1(temp+'0');
 	data=data-temp*1000;
 	temp=data/100;
-	WriteUART1(temp+'0');
+  if(temp != 0)
+    WriteUART1(temp+'0');
 	data=data-temp*100;
 	temp=data/10;
-	WriteUART1(temp+'0');
+  if(temp != 0)
+    WriteUART1(temp+'0');
 	data=data-temp*10;
 	WriteUART1(data+'0');
 }

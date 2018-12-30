@@ -17,7 +17,7 @@ void drawPasswordWrong();
 void drawAlcTestInfo();
 void drawAlcTestFail();
 void drawAlcTestPass();
-void drawSupervisorOpen();
+void drawSudoOpen();
 void drawNoPwdEeprom();
 
 #endif

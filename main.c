@@ -27,9 +27,8 @@
 char *init_message_eeprom = "EEPROM initialized\0";
 /* PASSWORD */
 #define PWD_LEN 4
-unsigned int pwd[PWD_LEN]; //= {1,3,5,8};
-unsigned int pwd_asd[PWD_LEN] = {6,7,8,9};
-unsigned int pwd_array[PWD_LEN];
+unsigned int pwd[PWD_LEN];
+unsigned int pwd_entry[PWD_LEN];
 /*************************/
 
 /* commands */
@@ -37,9 +36,14 @@ unsigned int pwd_array[PWD_LEN];
 #define OPEN 0
 #define CLOSE 1
 #define ADDPWD 2
+#define RMPWD 3
+#define HELP 4
 char *open_cmd = "open";
 char *close_cmd = "close";
 char *addpwd_cmd = "addpwd";
+char *rmpwd_cmd = "rmpwd";
+char *help_cmd = "help";
+#define prompt "\n[sudo]$ "
 /*************************/
 
 /* Top level functions */
@@ -57,6 +61,8 @@ int checkEepromSavedPWDs();
 void writePwdEeprom(unsigned int pwd_in[PWD_LEN]);
 void readPwdEeprom(unsigned int *pwd_pt, int pwd_num);
 int cmpArray(unsigned int *ar1, unsigned int *ar2, unsigned int len);
+int rmPwdEeprom();
+void noPwdMessages();
 /*************************************/
 
 unsigned int TMR4_soft_cnt = 0;
@@ -79,7 +85,7 @@ int main(int argc, char** argv) {
   int PWD_in = 0;
   int no_alc = 1;
   int cmd = -1;
-  int supervisor = 0;
+  int sudo = 0;
   int pwd_cnt = 0;
   int pwd_rx_cnt = 0;
   int pwd_rd = 0;
@@ -101,41 +107,40 @@ int main(int argc, char** argv) {
 
   /* check if passwords are saved */
   pwd_saved_num = checkEepromSavedPWDs();
-  if(checkEepromInitialized(init_message_eeprom) == -1 || pwd_saved_num == 0){
+  if(checkEepromInitialized(init_message_eeprom) == -1 || pwd_saved_num <= 0){
     pwd_saved_num = 0;
     initEeprom(init_message_eeprom);
-    RS232_putst("No users were registered\n");
-    RS232_putst("Please add password\n");
-    RS232_putst("With command mkpwd followed by sequence of 4 numbers 0-9\n");
-    drawNoPwdEeprom();
+    noPwdMessages();
   }
-  else{
+  else if( pwd_saved_num > 0 && checkEepromInitialized(init_message_eeprom)){
     WriteUART1dec2string(pwd_saved_num);
-    RS232_putst(" users were registered\n");
+    RS232_putst(" users are registered\n");
     drawNumpad();
   }
 
-  RS232_putst("Type for supervisor mode\n");
+  RS232_putst(prompt);
   CloseDoors();
   while(1){
     /* Check if command is received over UART
        set flags for given command
-          *supervisor indicates that doors are controlled by UART
+          *sudo indicates that doors are controlled by UART
     */
     if(getBuff() > 0){
       rbuff_rx = rbuff();
-      if(receiving_pwd == 0){
+      if(receiving_pwd == 0){  // receiving command from UART
         cmd = decodeCMD(rbuff_rx);
 
         if(cmd == OPEN){
           pwd_rd = 0;
           pwd_cnt = 0;
-          supervisor = 1;
-          drawSupervisorOpen();
+          sudo = 1;
+          RS232_putst("\nExecuting open\n");
+          drawSudoOpen();
           OpenDoors();
         }
         if(cmd == CLOSE){
-          supervisor = 0;
+          sudo = 0;
+          RS232_putst("\nExecuting close\n");
           CloseDoors();
           if(pwd_saved_num > 0)
             drawNumpad();
@@ -143,29 +148,48 @@ int main(int argc, char** argv) {
             drawNoPwdEeprom();
         }
         if(cmd == ADDPWD){
-          RS232_putst("\nExecuting addpwd\n");
+          RS232_putst("\nExecuting addpwd");
           receiving_pwd = 1;
         }
+        if(cmd == RMPWD){
+          sudo = 1;
+          RS232_putst("\nExecuting rmpwd\n");
+          pwd_saved_num = rmPwdEeprom();
+          noPwdMessages();
+        }
+        if(cmd == HELP){
+          RS232_putst("\nCommands available\n");
+          RS232_putst("<open> Open doors as sudo\n");
+          RS232_putst("<close> Close doors as sudo\n");
+          RS232_putst("<addpwd> Add new password to EEPROM,\n         type 4 numbers 0-9 followed by enter after each number\n");
+          RS232_putst("<rmpwd> Remove all saved passwords\n");
+        }
+        RS232_putst(prompt);
       }
       else{
-        WriteUART1(rbuff_rx[0]);
+        WriteUART1((unsigned int)'*');
         pwd[pwd_rx_cnt] = (rbuff_rx[0]-'0');
         pwd_rx_cnt++;
         if(pwd_rx_cnt == PWD_LEN){
+          pwd_rx_cnt = 0;
           pwd_saved_num++;
           writePwdEeprom(pwd);
           receiving_pwd = 0;
+          drawNumpad();
+          RS232_putst("\nPassword added\n");
+          RS232_putst(prompt);
+          sudo = 0;
         }
       }
     }
     /* Else doors are controlled by MCU */
-    else if(supervisor == 0 && pwd_saved_num != 0){
+    else if(sudo == 0 && pwd_saved_num != 0){
 
       /* Reading input from touchscreen */
       PWD_in = getNumTS();
       if(PWD_in != -1 && pwd_rd == 0){
         pwd_rd = 1;
-        pwd_array[pwd_cnt] = PWD_in;
+        pwd_entry[pwd_cnt] = PWD_in;
         drawPwdIndicator(pwd_cnt);
         pwd_cnt++;
         Buzz(70, 4000);
@@ -175,7 +199,7 @@ int main(int argc, char** argv) {
       if(pwd_cnt == PWD_LEN){  // Entered all numbers from touchscreen
         pwd_cnt = 0;
 
-        if(check_password(pwd_array, PWD_LEN) != -1){ //PWD correct
+        if(check_password(pwd_entry, PWD_LEN) != -1){ //PWD correct
           drawPasswordCorrect();
           __delay_ms(2000);
           drawAlcTestInfo(); // begin alcotest
@@ -218,6 +242,17 @@ int main(int argc, char** argv) {
     return (EXIT_SUCCESS);
 }
 
+void noPwdMessages(){
+  RS232_putst("No users are registered\n");
+  RS232_putst("Please add password\n");
+  RS232_putst("Type <help> command for more info\n");
+  drawNoPwdEeprom();
+
+}
+int rmPwdEeprom(){
+  Eeprom_WriteWord(PWD_NUM_ADDR, 0);
+  return 0;
+}
 void writePwdEeprom(unsigned int pwd_in[PWD_LEN]){
   unsigned int i, wr_addr;
   unsigned int pwd_num = Eeprom_ReadWord(PWD_NUM_ADDR);
@@ -226,18 +261,14 @@ void writePwdEeprom(unsigned int pwd_in[PWD_LEN]){
   for(i = 0; i<PWD_LEN; i++){
     wr_addr = PWD_BASE_ADDR + (pwd_num-1)*PWD_LEN + i;
     Eeprom_WriteWord(wr_addr, pwd_in[i]);
-    WriteUART1dec2string(pwd_in[i]);
   }
 }
 void readPwdEeprom(unsigned int *pwd_pt, int pwd_num){
   unsigned int base_addr = PWD_BASE_ADDR + pwd_num*PWD_LEN;
   int i = 0;
-  RS232_putst("Reading password from eeprom: \n");
   for(i=0; i<PWD_LEN; i++){
     pwd_pt[i] = Eeprom_ReadWord(base_addr+i);
-    WriteUART1dec2string(pwd_pt[i]);
   }
-  RS232_putst("\nEnd reading password from eeprom: \n");
 }
 void writeStrEeprom(char *str, int addr){
   int i = 0;
@@ -274,6 +305,8 @@ int check_password(unsigned int *entry,
   unsigned int pwd[PWD_LEN];
   int j;
 
+  if(pwd_num == 0)
+    return -1;
   for(j=0; j<pwd_num; j++){
     readPwdEeprom(pwd, j);
     if(cmpArray(pwd, entry, PWD_LEN) == 1)
@@ -284,15 +317,11 @@ int check_password(unsigned int *entry,
 
 int cmpArray(unsigned int *ar1, unsigned int *ar2, unsigned int len){
   int i;
-  RS232_putst("\nComparing strings!\n");
   for(i=0; i<len; i++){
-    WriteUART1dec2string(ar2[i]);
-    WriteUART1dec2string(ar1[i]);
     if(ar1[i] != ar2[i]){
       return -1;
     }
   }
-  RS232_putst("\nMatched strings!\n");
   return 1;
 }
 void CloseDoors(){
@@ -323,17 +352,26 @@ int strcmp(char *str1, char *str2){
 
 int decodeCMD(char *cmd){
   if(strcmp(open_cmd, cmd) != -1){
-    RS232_putst("\nCommand open received!\n");
+    RS232_putst("\nCommand open received!");
     return OPEN;
   }
   else if(strcmp(close_cmd, cmd) != -1){
-    RS232_putst("\nCommand close received!\n");
+    RS232_putst("\nCommand close received!");
     return CLOSE;
   }
   else if(strcmp(addpwd_cmd, cmd) != -1){
-    RS232_putst("\nCommand addpwd received!\n");
+    RS232_putst("\nCommand addpwd received!");
     return ADDPWD;
   }
+  else if(strcmp(rmpwd_cmd, cmd) != -1){
+    RS232_putst("\nCommand rmpwd received!");
+    return RMPWD;
+  }
+  else if(strcmp(help_cmd, cmd) != -1){
+    RS232_putst("\nCommand help received!\n");
+    return HELP;
+  }
+
 
   RS232_putst("\nInvalid command!\n");
   RS232_putst(cmd);
