@@ -67,13 +67,15 @@ void noPwdMessages();
 
 unsigned int TMR4_soft_cnt = 0;
 unsigned int alc_test_timeout = 0;
+unsigned int opened_door_timeout = 0;
 void __attribute__((__interrupt__, no_auto_psv )) _T4Interrupt(void)
 {
   TMR4 =0;
   TMR4_soft_cnt++;
-  if(TMR4_soft_cnt == 1){
+  if(TMR4_soft_cnt == 2){
     TMR4_soft_cnt = 0;
     alc_test_timeout = 1;
+    opened_door_timeout = 1;
     TMR4_stop();
   }
 
@@ -97,6 +99,7 @@ int main(int argc, char** argv) {
 	ConfigureLCDPins();
   initTouchScreen();
   initServo();
+  initPIR();
   initBuzzer();
   initAlc();
 	ADCinit_TS();
@@ -217,7 +220,11 @@ int main(int argc, char** argv) {
             no_alc = 1;
             drawAlcTestPass();
             OpenDoors();
-            __delay_ms(3000);
+            opened_door_timeout = 0;
+            TMR4_start();
+            while(!readPIR() && !opened_door_timeout);
+            opened_door_timeout = 0;
+            __delay_ms(1000);
             CloseDoors();
           }
           else{ // alcohol is detected

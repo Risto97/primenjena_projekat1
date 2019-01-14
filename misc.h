@@ -14,5 +14,7 @@ void ServoStart(unsigned int direction);
 void initBuzzer();
 void BuzzerStart();
 void BuzzerStop();
+void initPIR();
+int readPIR();
 
 #endif

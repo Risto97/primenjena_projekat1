@@ -98,5 +98,13 @@ void initBuzzer(){
   TMR5_init();
 }
 
+void initPIR(){
+  TRISDbits.TRISD8=1;
+}
+
+int readPIR(){
+  return PORTDbits.RD8;
+}
+
 
 #endif
